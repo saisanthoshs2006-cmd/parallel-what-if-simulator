@@ -47,58 +47,93 @@ const dummy = new THREE.Object3D();
 const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0);
 
 /**
- * All trees as three instanced meshes (trunks, street crowns, planted crowns) instead of two
- * meshes per tree. Existing street trees are always present; every potential planted tree
- * (the 100% scenario) keeps its instance and grows in/out as the simulation's tree set changes,
- * so tree identity is stable (instance k ↔ simulated tree `tree-k`).
+ * Existing street trees: two instanced meshes (trunks, crowns), written once. They are part of the
+ * SHARED scene (identical in every view), so they live on layer 0.
  */
-export function Trees({
-  layout,
+export function StreetTrees({ layout }: { layout: CityLayout }) {
+  const street = layout.streetTrees;
+  const ns = street.length;
+  const trunkRef = useRef<THREE.InstancedMesh>(null);
+  const crownRef = useRef<THREE.InstancedMesh>(null);
+
+  useLayoutEffect(() => {
+    street.forEach((t, i) => {
+      if (!STREET_TREES_AT_DESIGN_SIZE) {
+        // Legacy look: unit-size trunk and crown centred on the tree's base point.
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.setScalar(1);
+        dummy.position.set(t.x, STREET_Y, t.z);
+        dummy.updateMatrix();
+        trunkRef.current!.setMatrixAt(i, dummy.matrix);
+        crownRef.current!.setMatrixAt(i, dummy.matrix);
+        return;
+      }
+      const R = MATURE_RADIUS * STREET_SIZE;
+      const H = 1.2 + 1.6 * STREET_SIZE;
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, H, 1);
+      dummy.position.set(t.x, STREET_Y + H / 2, t.z);
+      dummy.updateMatrix();
+      trunkRef.current!.setMatrixAt(i, dummy.matrix);
+      dummy.scale.set(R, R * 0.9, R);
+      dummy.position.set(t.x, STREET_Y + H + R * 0.55, t.z);
+      dummy.updateMatrix();
+      crownRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    trunkRef.current!.instanceMatrix.needsUpdate = true;
+    crownRef.current!.instanceMatrix.needsUpdate = true;
+  }, [street]);
+
+  return (
+    <group>
+      <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, ns]} frustumCulled={false} castShadow />
+      <instancedMesh ref={crownRef} args={[crownGeo, streetCrownMat, ns]} frustumCulled={false} castShadow />
+    </group>
+  );
+}
+
+/**
+ * Newly planted trees: two instanced meshes (trunks, crowns). Every potential planted tree (the
+ * 100% scenario) keeps its instance and grows in/out as the simulation's tree set changes, so
+ * tree identity is stable (instance k ↔ simulated tree `tree-k`). These depend on the simulated
+ * scenario, so `layerMask` lets Compare mode draw a baseline and a scenario copy on separate layers.
+ */
+export function PlantedTrees({
   potential,
   planted,
   stage,
+  layerMask = 1,
 }: {
-  layout: CityLayout;
   potential: PlantedTree[];
   /** 1 where simulated tree k exists (aligned to `potential`). */
   planted: Float32Array;
   stage: CanopyStage;
+  /** three.js layer bitmask (1 = default layer). */
+  layerMask?: number;
 }) {
-  const street = layout.streetTrees;
-  const ns = street.length;
   const np = potential.length;
-  const nt = ns + np;
-
   const trunkRef = useRef<THREE.InstancedMesh>(null);
-  const streetRef = useRef<THREE.InstancedMesh>(null);
-  const plantedRef = useRef<THREE.InstancedMesh>(null);
+  const crownRef = useRef<THREE.InstancedMesh>(null);
 
-  // Combined per-tree arrays: [street trees..., planted trees...]
   const pos = useMemo(() => {
-    const x = new Float32Array(nt);
-    const z = new Float32Array(nt);
-    const y = new Float32Array(nt);
-    street.forEach((t, i) => ((x[i] = t.x), (z[i] = t.z), (y[i] = STREET_Y)));
-    potential.forEach((t, k) => ((x[ns + k] = t.x), (z[ns + k] = t.z), (y[ns + k] = PLANTED_Y)));
-    return { x, z, y };
-  }, [street, potential, ns, nt]);
+    const x = new Float32Array(np);
+    const z = new Float32Array(np);
+    potential.forEach((t, k) => ((x[k] = t.x), (z[k] = t.z)));
+    return { x, z };
+  }, [potential, np]);
 
   const state = useRef<{ g: Float32Array; s: Float32Array } | null>(null);
   const dirty = useRef(true);
 
   const targets = useMemo(() => {
-    const g = new Float32Array(nt);
-    const s = new Float32Array(nt);
-    for (let i = 0; i < ns; i++) {
-      g[i] = 1;
-      s[i] = STREET_SIZE;
-    }
+    const g = new Float32Array(np);
+    const s = new Float32Array(np);
     for (let k = 0; k < np; k++) {
-      g[ns + k] = planted[k];
-      s[ns + k] = stage === "mature" ? 1 : 0.3;
+      g[k] = planted[k];
+      s[k] = stage === "mature" ? 1 : 0.3;
     }
     return { g, s };
-  }, [planted, stage, ns, np, nt]);
+  }, [planted, stage, np]);
   const latest = useRef(targets);
   latest.current = targets;
 
@@ -107,17 +142,7 @@ export function Trees({
     const gr = st.g[i];
     if (gr <= 0.01) {
       trunkRef.current!.setMatrixAt(i, HIDDEN);
-      (i < ns ? streetRef : plantedRef).current!.setMatrixAt(i < ns ? i : i - ns, HIDDEN);
-      return;
-    }
-    if (i < ns && !STREET_TREES_AT_DESIGN_SIZE) {
-      // Legacy look: unit-size trunk and crown centred on the tree's base point.
-      dummy.rotation.set(0, 0, 0);
-      dummy.scale.setScalar(1);
-      dummy.position.set(pos.x[i], pos.y[i], pos.z[i]);
-      dummy.updateMatrix();
-      trunkRef.current!.setMatrixAt(i, dummy.matrix);
-      streetRef.current!.setMatrixAt(i, dummy.matrix);
+      crownRef.current!.setMatrixAt(i, HIDDEN);
       return;
     }
     const sz = st.s[i];
@@ -125,25 +150,24 @@ export function Trees({
     const H = 1.2 + 1.6 * sz;
     dummy.rotation.set(0, 0, 0);
     dummy.scale.set(gr, Math.max(0.001, gr * H), gr);
-    dummy.position.set(pos.x[i], pos.y[i] + (gr * H) / 2, pos.z[i]);
+    dummy.position.set(pos.x[i], PLANTED_Y + (gr * H) / 2, pos.z[i]);
     dummy.updateMatrix();
     trunkRef.current!.setMatrixAt(i, dummy.matrix);
     dummy.scale.set(gr * R, gr * R * 0.9, gr * R);
-    dummy.position.set(pos.x[i], pos.y[i] + gr * (H + R * 0.55), pos.z[i]);
+    dummy.position.set(pos.x[i], PLANTED_Y + gr * (H + R * 0.55), pos.z[i]);
     dummy.updateMatrix();
-    (i < ns ? streetRef : plantedRef).current!.setMatrixAt(i < ns ? i : i - ns, dummy.matrix);
+    crownRef.current!.setMatrixAt(i, dummy.matrix);
   }
 
   function flush() {
     trunkRef.current!.instanceMatrix.needsUpdate = true;
-    streetRef.current!.instanceMatrix.needsUpdate = true;
-    plantedRef.current!.instanceMatrix.needsUpdate = true;
+    crownRef.current!.instanceMatrix.needsUpdate = true;
   }
 
   useLayoutEffect(() => {
     if (state.current) return;
     state.current = { g: targets.g.slice(), s: targets.s.slice() };
-    for (let i = 0; i < nt; i++) write(i);
+    for (let i = 0; i < np; i++) write(i);
     flush();
     dirty.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,7 +184,7 @@ export function Trees({
     const reduce = prefersReducedMotion();
     const d = Math.min(dt, 0.05);
     let moved = false;
-    for (let i = 0; i < nt; i++) {
+    for (let i = 0; i < np; i++) {
       if (st.g[i] === t.g[i] && st.s[i] === t.s[i]) continue;
       let g = reduce ? t.g[i] : THREE.MathUtils.damp(st.g[i], t.g[i], 5, d);
       let s = reduce ? t.s[i] : THREE.MathUtils.damp(st.s[i], t.s[i], 3, d);
@@ -177,13 +201,13 @@ export function Trees({
 
   return (
     <group>
-      <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, nt]} frustumCulled={false} castShadow />
-      <instancedMesh ref={streetRef} args={[crownGeo, streetCrownMat, ns]} frustumCulled={false} castShadow />
+      <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, np]} frustumCulled={false} castShadow layers-mask={layerMask} />
       <instancedMesh
-        ref={plantedRef}
+        ref={crownRef}
         args={[crownGeo, stage === "mature" ? plantedCrownMat : saplingCrownMat, np]}
         frustumCulled={false}
         castShadow
+        layers-mask={layerMask}
       />
     </group>
   );

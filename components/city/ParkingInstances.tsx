@@ -47,7 +47,16 @@ const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0);
  * ~1,000 per-stall meshes become 8 draw calls. Animation state lives in typed arrays and is
  * only advanced while something is moving; reduced motion snaps straight to the target.
  */
-export function ParkingInstances({ layout, targets }: { layout: CityLayout; targets: StallTargets }) {
+export function ParkingInstances({
+  layout,
+  targets,
+  layerMask = 1,
+}: {
+  layout: CityLayout;
+  targets: StallTargets;
+  /** three.js layer bitmask (1 = default layer); Compare mode uses separate layers per side. */
+  layerMask?: number;
+}) {
   const spaces = layout.spaces;
   const n = spaces.length;
 
@@ -246,13 +255,19 @@ export function ParkingInstances({ layout, targets }: { layout: CityLayout; targ
 
   return (
     <group>
-      <instancedMesh ref={edgeRef} args={[unitBox, edgeMat, n]} frustumCulled={false} receiveShadow />
-      <instancedMesh ref={grassRef} args={[unitBox, grassMat, n]} frustumCulled={false} receiveShadow />
-      <instancedMesh ref={bushRef} args={[bushGeo, bushMat, n]} frustumCulled={false} castShadow />
-      <instancedMesh ref={bodyRef} args={[CAR_BODY_GEO, CAR_BODY_MAT, n]} frustumCulled={false} castShadow />
-      <instancedMesh ref={cabinRef} args={[CAR_CABIN_GEO, CAR_GLASS_MAT, n]} frustumCulled={false} castShadow />
-      <instancedMesh ref={ghostRef} args={[GHOST_BODY_GEO, GHOST_MAT, n]} frustumCulled={false} />
-      <lineSegments ref={linesRef} geometry={lineGeo} material={GHOST_EDGE_MAT} frustumCulled={false} />
+      <instancedMesh ref={edgeRef} args={[unitBox, edgeMat, n]} frustumCulled={false} receiveShadow layers-mask={layerMask} />
+      <instancedMesh ref={grassRef} args={[unitBox, grassMat, n]} frustumCulled={false} receiveShadow layers-mask={layerMask} />
+      <instancedMesh ref={bushRef} args={[bushGeo, bushMat, n]} frustumCulled={false} castShadow layers-mask={layerMask} />
+      <instancedMesh ref={bodyRef} args={[CAR_BODY_GEO, CAR_BODY_MAT, n]} frustumCulled={false} castShadow layers-mask={layerMask} />
+      <instancedMesh ref={cabinRef} args={[CAR_CABIN_GEO, CAR_GLASS_MAT, n]} frustumCulled={false} castShadow layers-mask={layerMask} />
+      <instancedMesh ref={ghostRef} args={[GHOST_BODY_GEO, GHOST_MAT, n]} frustumCulled={false} layers-mask={layerMask} />
+      <lineSegments
+        ref={linesRef}
+        geometry={lineGeo}
+        material={GHOST_EDGE_MAT}
+        frustumCulled={false}
+        layers-mask={layerMask}
+      />
     </group>
   );
 }

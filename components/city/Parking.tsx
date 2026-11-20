@@ -8,7 +8,7 @@ import { ParkingInstances } from "./ParkingInstances";
 import type { StallTargets } from "./instanceTargets";
 
 /** Painted stall dividers (static; hidden under the planted patches as they rise). */
-function StallLines({ layout }: { layout: CityLayout }) {
+export function StallLines({ layout }: { layout: CityLayout }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const items = useMemo(
     () =>
@@ -38,7 +38,7 @@ function StallLines({ layout }: { layout: CityLayout }) {
 }
 
 /** Billboard label drawn to a canvas texture (no DOM portals inside the Canvas). */
-function LotLabel({ x, z, text }: { x: number; z: number; text: string }) {
+function LotLabel({ x, z, text, layerMask }: { x: number; z: number; text: string; layerMask: number }) {
   const { texture, aspect } = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = 512;
@@ -63,13 +63,26 @@ function LotLabel({ x, z, text }: { x: number; z: number; text: string }) {
   // Free the GPU texture of the previous label text.
   useEffect(() => () => texture.dispose(), [texture]);
   return (
-    <sprite position={[x, 9, z]} scale={[3.4 * aspect, 3.4, 1]}>
+    <sprite position={[x, 9, z]} scale={[3.4 * aspect, 3.4, 1]} layers-mask={layerMask}>
       <spriteMaterial map={texture} depthWrite={false} toneMapped={false} />
     </sprite>
   );
 }
 
-export function ParkingLots({ layout, targets }: { layout: CityLayout; targets: StallTargets }) {
+/**
+ * The scenario-dependent parts of the parking lots: stall strips, parked cars, amber markers and
+ * the per-lot labels. `layerMask` puts them on a three.js layer (1 = default); Compare mode mounts
+ * one copy per side on separate layers. Painted stall lines are shared and live in `StallLines`.
+ */
+export function ParkingDependents({
+  layout,
+  targets,
+  layerMask = 1,
+}: {
+  layout: CityLayout;
+  targets: StallTargets;
+  layerMask?: number;
+}) {
   const lots = useMemo(() => {
     const out: Array<{ block: CityLayout["blocks"][number]; total: number; converted: number }> = [];
     for (const block of layout.blocks.filter((b) => b.kind === "lot")) {
@@ -86,13 +99,13 @@ export function ParkingLots({ layout, targets }: { layout: CityLayout; targets: 
   }, [layout, targets]);
   return (
     <group>
-      <StallLines layout={layout} />
-      <ParkingInstances layout={layout} targets={targets} />
+      <ParkingInstances layout={layout} targets={targets} layerMask={layerMask} />
       {lots.map(({ block, total, converted }) => (
         <LotLabel
           key={block.id}
           x={block.cx}
           z={block.cz}
+          layerMask={layerMask}
           text={`LOT ${block.id.replace("lot-", "")} · ${total - converted}/${total} parking`}
         />
       ))}

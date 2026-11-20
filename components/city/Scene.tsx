@@ -9,8 +9,8 @@ import type { CanopyStage } from "@/lib/simulation/scenario-url";
 import type { CameraPreset } from "@/store/simulation-store";
 import { CameraRig } from "./CameraRig";
 import { Environment } from "./Environment";
-import { ParkingLots } from "./Parking";
-import { Trees } from "./Trees";
+import { ParkingDependents, StallLines } from "./Parking";
+import { PlantedTrees, StreetTrees } from "./Trees";
 import { Traffic } from "./Traffic";
 import { buildStallTargets, buildTreeTargets } from "./instanceTargets";
 import { COLORS } from "./palette";
@@ -55,8 +55,10 @@ export function Scene({ sim, stage, camera }: SceneProps) {
         shadow-bias={-0.0004}
       />
       <Environment layout={CITY} />
-      <ParkingLots layout={CITY} targets={stallTargets} />
-      <Trees layout={CITY} potential={potentialTrees} planted={treeTargets} stage={stage} />
+      <StallLines layout={CITY} />
+      <StreetTrees layout={CITY} />
+      <ParkingDependents layout={CITY} targets={stallTargets} />
+      <PlantedTrees potential={potentialTrees} planted={treeTargets} stage={stage} />
       <Traffic layout={CITY} />
       <OrbitControls
         makeDefault
