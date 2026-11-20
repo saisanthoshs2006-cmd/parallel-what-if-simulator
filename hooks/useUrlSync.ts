@@ -1,19 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { simulationStore } from "@/store/simulation-store";
+import { useSimStoreApi } from "@/store/simulation-store";
 import { parseScenario, serializeScenario } from "@/lib/simulation/scenario-url";
 
 /**
- * Restores scenario state from the URL on first load, then mirrors every
- * state change back into the query string (history.replaceState, no reloads).
+ * Mirrors every state change into the query string (history.replaceState, no reloads) and
+ * restores state on back/forward. The initial state already comes from the URL (see app/page.tsx).
  */
 export function useUrlSync() {
+  const store = useSimStoreApi();
   useEffect(() => {
-    const { hydrate } = simulationStore.getState();
-    hydrate(parseScenario(window.location.search));
-
-    const unsub = simulationStore.subscribe((s, prev) => {
+    const unsub = store.subscribe((s, prev) => {
       if (
         s.conversionPct === prev.conversionPct &&
         s.view === prev.view &&
@@ -21,15 +19,13 @@ export function useUrlSync() {
         s.name === prev.name
       )
         return;
-      const qs = serializeScenario(s);
-      window.history.replaceState(null, "", `${window.location.pathname}?${qs}`);
+      window.history.replaceState(null, "", `${window.location.pathname}?${serializeScenario(s)}`);
     });
-
-    const onPop = () => simulationStore.getState().hydrate(parseScenario(window.location.search));
+    const onPop = () => store.getState().hydrate(parseScenario(window.location.search));
     window.addEventListener("popstate", onPop);
     return () => {
       unsub();
       window.removeEventListener("popstate", onPop);
     };
-  }, []);
+  }, [store]);
 }

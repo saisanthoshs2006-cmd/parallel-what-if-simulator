@@ -7,6 +7,9 @@ import type { SimulationResult } from "@/lib/simulation/types";
 import type { CanopyStage } from "@/lib/simulation/scenario-url";
 import type { CameraPreset } from "@/store/simulation-store";
 import { Scene } from "./Scene";
+import { framePreset } from "./cameraFraming";
+
+const INITIAL_CAMERA = framePreset("overview", 1.6, 36).position;
 
 function webglAvailable(): boolean {
   try {
@@ -68,9 +71,9 @@ export default function CityCanvas({ sim, stage, camera }: Props) {
     <Boundary>
       <Suspense fallback={<Loading />}>
         <Canvas
-          shadows
+          shadows="percentage"
           dpr={[1, 1.75]}
-          camera={{ fov: 36, near: 1, far: 800, position: [118, 150, 138] }}
+          camera={{ fov: 36, near: 1, far: 1200, position: INITIAL_CAMERA }}
           gl={{ antialias: true, powerPreference: "high-performance" }}
           aria-label="Interactive 3D view of the fictional demonstration neighborhood. Drag to orbit, scroll to zoom."
         >

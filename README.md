@@ -1,6 +1,6 @@
 # Parallel — Rewrite Your City
 
-An interactive urban what-if simulator. Convert surface parking into green space in a **fictional demonstration neighborhood** and watch the 3D city, the metrics and the charts change together. Every outcome is a deterministic, explainable consequence of explicit assumptions.
+An interactive urban what-if simulator. Convert surface parking into green space in a **fictional demonstration neighborhood** and watch the 3D city and the metrics change together. Every outcome is a deterministic, explainable consequence of explicit assumptions.
 
 > Default question: *"What if we converted 40% of neighborhood parking into green space?"*
 
@@ -38,7 +38,7 @@ app/                  Next.js App Router (layout, page, Tailwind theme)
 components/
   Workspace.tsx       3-column workspace; computes simulations once per state
   city/               React Three Fiber scene (environment, parking, trees, traffic, camera)
-  simulation/         Controls panel, insights panel, Recharts charts
+  simulation/         Controls panel, insights panel, parking-pressure card
   ui/                 Segmented control, tags, animated number
 lib/
   config/assumptions.ts   ← every model number, with units and notes
@@ -62,6 +62,8 @@ tests/                Vitest suites
 4. **Trees** = floor(green area ÷ 30 m² per tree). Tree *k* is hosted by a fixed stall, so trees don't jump around.
 5. **Added canopy at maturity** = trees × 20 m² (crown projection).
 
+6. **Parking pressure (illustrative):** assumed demand is 104 cars (≈72% of 144 stalls, an assumption in `assumptions.ts`). Without a space = max(0, demand − retained). The largest conversion with no shortfall is 28% (40 spaces); the first shortfall is at 29%. Baseline cars sit in a fixed hash-ranked set of stalls; a car whose stall is converted moves to an empty retained stall if one exists, otherwise it is shown as an amber translucent “ghost” car on its former stall.
+
 All values are in [`lib/config/assumptions.ts`](lib/config/assumptions.ts).
 
 ### What is and isn't claimed
@@ -69,7 +71,8 @@ All values are in [`lib/config/assumptions.ts`](lib/config/assumptions.ts).
 - **Model outputs** — computed by the engine from the assumptions.
 - **Assumptions** — inputs we chose (listed in the UI).
 - **Real-world measurements** — none. The neighborhood is fictional.
-- No claims about temperature, air quality, stormwater, health, traffic or cost. Parking demand is not modelled.
+- No claims about temperature, air quality, stormwater, health, traffic or cost.
+- Parking demand is a single assumed number. “Without a space” is a shortfall indicator, not a prediction of displacement, circling, spillover or traffic; the amber ghost cars are an illustration, not a vehicle simulation.
 
 ## Deploy to Vercel
 

@@ -46,8 +46,6 @@ export interface ParkingSpace {
   z: number;
   width: number;
   depth: number;
-  /** Visual only: whether a parked car is drawn here in the baseline. */
-  occupied: boolean;
   /** 0..5 palette index for the parked car. */
   carTone: number;
 }
@@ -81,6 +79,8 @@ export interface CityLayout {
   spaces: ParkingSpace[];
   /** Space IDs in the exact order they are converted. */
   conversionOrder: string[];
+  /** Fixed ranking of all space IDs; the first `parkingDemand` hold a modelled car at baseline. */
+  carOrder: string[];
   traffic: TrafficVehicle[];
 }
 
@@ -111,4 +111,23 @@ export interface SimulationResult {
   totalCanopyM2: number;
   /** Canopy at maturity as share of the study area. */
   canopyCoverPct: number;
+
+  // --- Parking pressure (illustrative; see lib/config/assumptions.ts) ---
+  /** Assumed number of cars needing a space. An assumption, not an observation. */
+  parkingDemand: number;
+  /** Modelled cars that fit in retained spaces: min(demand, retained). */
+  accommodatedDemand: number;
+  /** max(0, demand - retained). A shortfall indicator, not predicted displacement. */
+  unaccommodatedDemand: number;
+  parkingStatus: "accommodated" | "shortfall";
+  /** Spaces holding a modelled car in this state (all are retained spaces). */
+  parkedIds: string[];
+  /** Converted spaces whose baseline car has no modelled space; drawn as amber ghosts. */
+  unaccommodatedIds: string[];
+  /** Most spaces that can be converted with zero unaccommodated demand. */
+  maxConvertedWithoutShortfall: number;
+  /** Highest whole-percent slider level with zero unaccommodated demand (-1 if none). */
+  maxConversionPctWithoutShortfall: number;
+  /** Lowest slider level with a shortfall, or null if none up to 100%. */
+  firstShortfallPct: number | null;
 }

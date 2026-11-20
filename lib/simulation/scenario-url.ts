@@ -59,6 +59,19 @@ export function parseScenario(search: string | URLSearchParams): ScenarioState {
   };
 }
 
+/**
+ * Convert a Next.js `searchParams` object (values may be string | string[] | undefined)
+ * into a scenario. Repeated params use the first value, matching `URLSearchParams.get`.
+ */
+export function searchParamsToScenario(sp: Record<string, string | string[] | undefined>): ScenarioState {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    const first = Array.isArray(v) ? v[0] : v;
+    if (typeof first === "string") p.set(k, first);
+  }
+  return parseScenario(p);
+}
+
 export function buildShareUrl(origin: string, pathname: string, s: ScenarioState): string {
   return `${origin}${pathname}?${serializeScenario(s)}`;
 }

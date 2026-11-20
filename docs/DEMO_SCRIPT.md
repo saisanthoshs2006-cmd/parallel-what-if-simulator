@@ -11,6 +11,8 @@
 - Camera glides to the lot view. Right panel: **86 of 144 spaces retained**, **507.5 m² added green area**, **16 trees**, **320 m² added canopy at maturity**.
 - "Every number comes from the same list of converted stall IDs that the 3D scene uses."
 
+- Then the trade-off: "86 spaces for 104 assumed cars — 18 have no space." Point to the amber ghost cars and the **Parking pressure** card. Drag the slider back to 28% (the amber tick): "up to here, modelled demand is still met. Past it, every stall costs a car." (Demand is an illustrative assumption, not data.)
+
 ## 1:10 – 1:45 · Before / After
 - Toggle **Before** → **After** (top of the scene). Lots flip between baseline and scenario instantly.
 - Point to the stacked bar: baseline vs scenario parking.

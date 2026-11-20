@@ -1,4 +1,4 @@
-import { ASSUMPTIONS, LAYOUT_SEED } from "@/lib/config/assumptions";
+import { LAYOUT_SEED } from "@/lib/config/assumptions";
 import { hashString, mulberry32 } from "./prng";
 import type {
   Block,
@@ -89,7 +89,7 @@ function buildBuildings(blocks: Block[]): { buildings: Building[]; parks: Pocket
       }
       const w = 10.5 + rW * 4;
       const d = 10.5 + rD * 4;
-      const h = block.kind === "plaza" ? 20 + rH * 14 : 7 + rH * 14;
+      const h = block.kind === "plaza" ? 12 + rH * 10 : 5 + rH * 9;
       buildings.push({ id: `bld-${id}`, blockId: block.id, x, z, w, d, h, tone: rTone });
     });
   }
@@ -131,7 +131,6 @@ function buildSpaces(blocks: Block[]): ParkingSpace[] {
           z: b.cz + ROW_Z[row],
           width: STALL_W,
           depth: STALL_D,
-          occupied: h % 100 < ASSUMPTIONS.visualOccupancyPct,
           carTone: (h >>> 8) % 6,
         });
       }
@@ -154,6 +153,18 @@ function buildConversionOrder(spaces: ParkingSpace[]): string[] {
         a.col - b.col ||
         lotIndex(a.lotId) - lotIndex(b.lotId),
     )
+    .map((s) => s.id);
+}
+
+/**
+ * Fixed, hash-ranked ordering of every stall. The engine treats the first
+ * `parkingDemand` entries as the stalls holding a modelled car at baseline.
+ * Deterministic (string hash, no PRNG state) and independent of conversion.
+ */
+function buildCarOrder(spaces: ParkingSpace[]): string[] {
+  return [...spaces]
+    .map((s) => ({ id: s.id, h: hashString(`car:${s.id}`) }))
+    .sort((a, b) => a.h - b.h || (a.id < b.id ? -1 : 1))
     .map((s) => s.id);
 }
 
@@ -208,6 +219,7 @@ function createLayout(): CityLayout {
     streetTrees: buildStreetTrees(blocks),
     spaces,
     conversionOrder: buildConversionOrder(spaces),
+    carOrder: buildCarOrder(spaces),
     traffic: buildTraffic(),
   };
 }

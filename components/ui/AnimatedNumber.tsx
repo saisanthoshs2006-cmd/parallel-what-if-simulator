@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { animate } from "motion/react";
+import { prefersReducedMotion } from "@/lib/motion";
 
-/** Tweens between numeric values; renders the final value immediately if motion is reduced. */
+const fmt = (n: number, decimals: number) =>
+  n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+
+/**
+ * Tweens between numeric values. The initial text is rendered once by React (identical on server
+ * and client, so shared links show the right value immediately); after that only the DOM text is
+ * updated imperatively, so React never briefly paints the final value before the tween starts.
+ * With reduced motion the value changes instantly.
+ */
 export function AnimatedNumber({
   value,
   decimals = 0,
@@ -14,34 +23,35 @@ export function AnimatedNumber({
   className?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const prev = useRef(value);
-  const fmt = (n: number) =>
-    n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  const shown = useRef(value);
+  const [initial] = useState(() => fmt(value, decimals));
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      el.textContent = fmt(value);
-      prev.current = value;
+    if (!el || shown.current === value) return;
+    if (prefersReducedMotion()) {
+      shown.current = value;
+      el.textContent = fmt(value, decimals);
       return;
     }
-    const controls = animate(prev.current, value, {
+    const controls = animate(shown.current, value, {
       duration: 0.5,
       ease: "easeOut",
       onUpdate: (v) => {
-        el.textContent = fmt(v);
+        shown.current = v;
+        el.textContent = fmt(v, decimals);
+      },
+      onComplete: () => {
+        shown.current = value;
+        el.textContent = fmt(value, decimals);
       },
     });
-    prev.current = value;
     return () => controls.stop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, decimals]);
 
   return (
-    <span ref={ref} className={className}>
-      {fmt(value)}
+    <span ref={ref} className={className} suppressHydrationWarning>
+      {initial}
     </span>
   );
 }

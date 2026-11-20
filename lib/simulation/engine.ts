@@ -20,6 +20,28 @@ export function convertedCountFor(pct: number, totalSpaces: number): number {
 }
 
 /**
+ * Parking-pressure threshold: the highest whole-percent conversion at which
+ * retained spaces still cover the assumed demand. Pure function of the inputs.
+ */
+export function parkingThreshold(
+  totalSpaces: number,
+  assumptions: Assumptions = ASSUMPTIONS,
+) {
+  const demand = Math.min(assumptions.illustrativeParkingDemand, totalSpaces);
+  let maxPct = -1;
+  for (let p = MIN_PCT; p <= MAX_PCT; p++) {
+    if (totalSpaces - convertedCountFor(p, totalSpaces) >= demand) maxPct = p;
+    else break; // converted count is monotonic in p
+  }
+  return {
+    demand,
+    maxConvertedWithoutShortfall: Math.max(0, totalSpaces - demand),
+    maxConversionPctWithoutShortfall: maxPct,
+    firstShortfallPct: maxPct < MAX_PCT ? maxPct + 1 : null,
+  };
+}
+
+/**
  * Pure simulation. Same inputs → identical output.
  *
  * 1. converted stalls = first N IDs of the layout's fixed conversion order
@@ -30,6 +52,15 @@ export function convertedCountFor(pct: number, totalSpaces: number): number {
  *
  * Tree k is hosted by a fixed stall in the conversion order (determined only
  * by k), so trees never "jump" when the slider moves — they only appear.
+ *
+ * Parking pressure (ILLUSTRATIVE — demand is an assumption, not an observation):
+ *   demand        = assumptions.illustrativeParkingDemand (capped at total stalls)
+ *   unaccommodated = max(0, demand - retained)
+ * Baseline cars sit in the first `demand` stalls of layout.carOrder. A car whose
+ * stall is converted moves to an empty retained stall if one exists (taken from
+ * the stalls that convert last); otherwise it is counted as unaccommodated and
+ * its origin stall is reported in `unaccommodatedIds`. This is bookkeeping for
+ * the visual, not a behavioural model: nothing says where such cars would go.
  */
 export function simulate(
   pct: number,
@@ -68,6 +99,20 @@ export function simulate(
   const addedCanopyM2 = treeCount * assumptions.matureCanopyPerTreeM2;
   const totalCanopyM2 = existingCanopyM2 + addedCanopyM2;
 
+  // --- Parking pressure ---
+  const th = parkingThreshold(totalSpaces, assumptions);
+  const demand = th.demand;
+  const convertedSet = new Set(convertedIds);
+  const baselineCars = layout.carOrder.slice(0, demand);
+  const baselineSet = new Set(baselineCars);
+  const staying = baselineCars.filter((id) => !convertedSet.has(id));
+  const displacedInOrder = convertedIds.filter((id) => baselineSet.has(id));
+  const stayingSet = new Set(staying);
+  const emptyRetained = [...retainedIds].reverse().filter((id) => !stayingSet.has(id));
+  const relocated = emptyRetained.slice(0, displacedInOrder.length);
+  const unaccommodatedDemand = Math.max(0, demand - retainedIds.length);
+  const unaccommodatedIds = displacedInOrder.slice(0, unaccommodatedDemand);
+
   return {
     conversionPct,
     totalSpaces,
@@ -85,6 +130,15 @@ export function simulate(
     addedCanopyM2,
     totalCanopyM2,
     canopyCoverPct: (totalCanopyM2 / layout.studyAreaM2) * 100,
+    parkingDemand: demand,
+    accommodatedDemand: demand - unaccommodatedDemand,
+    unaccommodatedDemand,
+    parkingStatus: unaccommodatedDemand > 0 ? "shortfall" : "accommodated",
+    parkedIds: [...staying, ...relocated],
+    unaccommodatedIds,
+    maxConvertedWithoutShortfall: th.maxConvertedWithoutShortfall,
+    maxConversionPctWithoutShortfall: th.maxConversionPctWithoutShortfall,
+    firstShortfallPct: th.firstShortfallPct,
   };
 }
 

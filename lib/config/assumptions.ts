@@ -26,8 +26,11 @@ export const ASSUMPTIONS = {
   matureCanopyPerTreeM2: 20,
   /** Same crown assumption applied to the fictional neighborhood's existing street trees. */
   existingTreeCanopyM2: 20,
-  /** Share of baseline stalls shown with a parked car (visual only; no metric uses it). */
-  visualOccupancyPct: 72,
+  /**
+   * ILLUSTRATIVE parking demand: cars that need a space in the baseline.
+   * 104 ≈ 72% of the 144 baseline stalls. Assumed, NOT observed.
+   */
+  illustrativeParkingDemand: 104,
 } as const;
 
 export const ASSUMPTION_LIST: Assumption[] = [
@@ -66,6 +69,13 @@ export const ASSUMPTION_LIST: Assumption[] = [
     unit: "m² / tree",
     note: "Applied to every street tree in the fictional baseline.",
   },
+  {
+    key: "illustrativeParkingDemand",
+    label: "Illustrative parking demand",
+    value: ASSUMPTIONS.illustrativeParkingDemand,
+    unit: "cars",
+    note: "≈72% of the 144 baseline stalls. Assumed for the demo, not observed or surveyed.",
+  },
 ];
 
 export const LIMITATIONS: string[] = [
@@ -73,7 +83,7 @@ export const LIMITATIONS: string[] = [
   "Outputs are arithmetic consequences of the assumptions above, not predictions or measurements.",
   "No claim is made about temperature, air quality, stormwater, health, traffic or cost.",
   "Tree survival, species, soil and overlapping crowns are ignored; canopy is a gross upper-bound-style sum.",
-  "Parking demand is not modelled: removed spaces are simply removed.",
+  "Parking demand is one illustrative number. “Without a space” is a shortfall indicator, not a prediction of displacement, circling, spillover or traffic.",
 ];
 
 /** The predefined hackathon scenario. */

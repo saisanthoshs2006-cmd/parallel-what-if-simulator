@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { Crosshair, Focus } from "lucide-react";
-import { useSim } from "@/store/simulation-store";
+import { SimulationStoreProvider, useSim } from "@/store/simulation-store";
+import type { ScenarioState } from "@/lib/simulation/scenario-url";
 import { simulate } from "@/lib/simulation/engine";
 import { useUrlSync } from "@/hooks/useUrlSync";
 import { useDemo } from "@/hooks/useDemo";
@@ -20,7 +21,7 @@ const CityCanvas = dynamic(() => import("./city/CityCanvas"), {
   ),
 });
 
-export function Workspace() {
+function WorkspaceInner() {
   useUrlSync();
   const demo = useDemo();
   const pct = useSim((s) => s.conversionPct);
@@ -35,15 +36,30 @@ export function Workspace() {
   const active = view === "before" ? baseline : scenario;
 
   return (
-    <main className="grid min-h-screen grid-cols-1 lg:h-screen lg:grid-cols-[320px_minmax(0,1fr)_360px] lg:grid-rows-1 lg:overflow-hidden">
+    <main className="flex min-h-screen flex-col lg:grid lg:h-screen lg:grid-cols-[320px_minmax(0,1fr)_360px] lg:grid-rows-1 lg:overflow-hidden">
       <ControlsPanel scenario={scenario} demo={demo} />
 
-      <section aria-label="3D neighborhood" className="relative order-first h-[62vh] min-h-[380px] lg:order-none lg:h-auto">
+      <section aria-label="3D neighborhood" className="sticky top-0 z-20 order-first h-[46vh] min-h-[300px] shrink-0 lg:relative lg:order-none lg:h-auto lg:min-h-0">
         <CityCanvas sim={active} stage={canopy} camera={camera} />
 
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
-          <div className="rounded-md border border-white/10 bg-bg/80 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-mute">
-            Fictional demonstration neighborhood
+          <div className="flex flex-col items-start gap-2">
+            <div className="rounded-md border border-white/10 bg-bg/80 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-mute">
+              <span className="sm:hidden">Fictional neighborhood</span>
+              <span className="hidden sm:inline">Fictional demonstration neighborhood</span>
+            </div>
+            {active.unaccommodatedDemand > 0 && (
+              <div
+                role="status"
+                className="flex items-center gap-2 rounded-md border border-amber/40 bg-bg/85 px-2.5 py-1.5 text-[11px] text-ink"
+              >
+                <span aria-hidden className="inline-block h-2.5 w-4 rounded-sm bg-amber/60" />
+                <span>
+                  <span className="font-mono tabular-nums text-amber">{active.unaccommodatedDemand}</span> assumed cars
+                  without a space<span className="hidden sm:inline"> (amber, illustrative)</span>
+                </span>
+              </div>
+            )}
           </div>
           <div className="pointer-events-auto">
             <Segmented
@@ -60,21 +76,21 @@ export function Workspace() {
         </div>
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
-          <p className="rounded-md bg-bg/70 px-2.5 py-1.5 text-[11px] text-dim">Drag to orbit · Scroll to zoom · Right-drag to pan</p>
-          <div className="pointer-events-auto flex gap-2">
+          <p className="hidden rounded-md bg-bg/70 px-2.5 py-1.5 text-[11px] text-dim sm:block">Drag to orbit · Scroll to zoom · Right-drag to pan</p>
+          <div className="pointer-events-auto ml-auto flex gap-2">
             <button
               type="button"
               onClick={() => frame("overview")}
-              className="flex items-center gap-1.5 rounded-md border border-white/10 bg-bg/85 px-2.5 py-1.5 text-xs text-mute hover:text-ink"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-white/10 bg-bg/85 px-2.5 py-1.5 text-xs text-mute hover:text-ink"
             >
               <Focus className="h-3.5 w-3.5" aria-hidden /> Overview
             </button>
             <button
               type="button"
               onClick={() => frame("focus")}
-              className="flex items-center gap-1.5 rounded-md border border-white/10 bg-bg/85 px-2.5 py-1.5 text-xs text-mute hover:text-ink"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-white/10 bg-bg/85 px-2.5 py-1.5 text-xs text-mute hover:text-ink"
             >
-              <Crosshair className="h-3.5 w-3.5" aria-hidden /> Lots
+              <Crosshair className="h-3.5 w-3.5" aria-hidden /> Top view
             </button>
           </div>
         </div>
@@ -82,5 +98,14 @@ export function Workspace() {
 
       <InsightsPanel active={active} baseline={baseline} scenario={scenario} view={view} />
     </main>
+  );
+}
+
+/** `initial` is parsed from the URL on the server, so the first paint already shows the shared scenario. */
+export function Workspace({ initial }: { initial: ScenarioState }) {
+  return (
+    <SimulationStoreProvider initial={initial}>
+      <WorkspaceInner />
+    </SimulationStoreProvider>
   );
 }

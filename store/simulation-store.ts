@@ -1,4 +1,7 @@
-import { createStore, useStore } from "zustand";
+"use client";
+
+import { createContext, createElement, useContext, useRef, type ReactNode } from "react";
+import { createStore, useStore, type StoreApi } from "zustand";
 import { clampPct } from "@/lib/simulation/engine";
 import {
   DEFAULT_SCENARIO,
@@ -13,6 +16,7 @@ export type CameraPreset = "overview" | "focus";
 export interface SimulationStore extends ScenarioState {
   /** Camera framing request; `nonce` increments so repeating a preset re-triggers it. */
   camera: { preset: CameraPreset; nonce: number };
+  /** True when the state came from (or has been synced with) the URL. */
   hydrated: boolean;
   setConversion: (pct: number) => void;
   setView: (view: ViewMode) => void;
@@ -24,11 +28,13 @@ export interface SimulationStore extends ScenarioState {
   loadDemo: () => void;
 }
 
-export function createSimulationStore() {
+/** Create an isolated store. Pass `initial` (e.g. parsed from the URL) so the very first render is correct. */
+export function createSimulationStore(initial?: ScenarioState) {
   return createStore<SimulationStore>()((set, get) => ({
     ...DEFAULT_SCENARIO,
+    ...(initial ? { ...initial, conversionPct: clampPct(initial.conversionPct) } : {}),
     camera: { preset: "overview", nonce: 0 },
-    hydrated: false,
+    hydrated: initial !== undefined,
     setConversion: (pct) => set({ conversionPct: clampPct(pct) }),
     setView: (view) => set({ view }),
     setCanopy: (canopy) => set({ canopy }),
@@ -55,9 +61,27 @@ export function createSimulationStore() {
   }));
 }
 
-/** App-wide singleton store. Tests create isolated stores via `createSimulationStore`. */
-export const simulationStore = createSimulationStore();
+export type SimulationStoreApi = StoreApi<SimulationStore>;
+
+const StoreContext = createContext<SimulationStoreApi | null>(null);
+
+/**
+ * Per-instance store provider. Each render tree (and each server request) gets its own store, so
+ * nothing leaks between requests, and `initial` makes the first server render and first client
+ * render identical.
+ */
+export function SimulationStoreProvider({ initial, children }: { initial?: ScenarioState; children: ReactNode }) {
+  const ref = useRef<SimulationStoreApi | null>(null);
+  if (ref.current === null) ref.current = createSimulationStore(initial);
+  return createElement(StoreContext.Provider, { value: ref.current }, children);
+}
+
+export function useSimStoreApi(): SimulationStoreApi {
+  const store = useContext(StoreContext);
+  if (!store) throw new Error("useSimStoreApi must be used inside <SimulationStoreProvider>");
+  return store;
+}
 
 export function useSim<T>(selector: (s: SimulationStore) => T): T {
-  return useStore(simulationStore, selector);
+  return useStore(useSimStoreApi(), selector);
 }

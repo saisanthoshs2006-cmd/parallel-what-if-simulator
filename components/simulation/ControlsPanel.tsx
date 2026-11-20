@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, Link2, Play, RotateCcw, Square } from "lucide-react";
-import { useSim, simulationStore } from "@/store/simulation-store";
+import { useSim, useSimStoreApi } from "@/store/simulation-store";
 import { buildShareUrl } from "@/lib/simulation/scenario-url";
 import { ASSUMPTIONS } from "@/lib/config/assumptions";
 import { MAX_NAME_LENGTH } from "@/lib/simulation/scenario-url";
@@ -21,7 +21,8 @@ export function ControlsPanel({
   const view = useSim((s) => s.view);
   const canopy = useSim((s) => s.canopy);
   const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
-  const st = simulationStore.getState;
+  const api = useSimStoreApi();
+  const st = api.getState;
 
   async function share() {
     const s = st();
@@ -76,27 +77,45 @@ export function ControlsPanel({
             {pct}%
           </output>
         </div>
-        <input
-          id="conversion"
-          type="range"
-          min={0}
-          max={100}
-          step={1}
-          value={pct}
-          className="parallel-range"
-          style={{ ["--fill" as string]: `${pct}%` }}
-          aria-valuetext={`${pct} percent: ${scenario.convertedCount} of ${scenario.totalSpaces} parking spaces converted`}
-          onChange={(e) => {
-            demo.stop();
-            st().setConversion(Number(e.target.value));
-            if (view === "before") st().setView("after");
-          }}
-        />
+        <div className="relative">
+          <input
+            id="conversion"
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={pct}
+            className="parallel-range"
+            style={{ ["--fill" as string]: `${pct}%` }}
+            aria-valuetext={`${pct} percent: ${scenario.convertedCount} of ${scenario.totalSpaces} parking spaces converted${
+              scenario.unaccommodatedDemand > 0 ? `; ${scenario.unaccommodatedDemand} assumed cars without a space` : ""
+            }`}
+            onChange={(e) => {
+              demo.stop();
+              st().setConversion(Number(e.target.value));
+              if (view === "before") st().setView("after");
+            }}
+          />
+          {scenario.maxConversionPctWithoutShortfall >= 0 && (
+            <div
+              aria-hidden
+              title={`Up to ${scenario.maxConversionPctWithoutShortfall}%: modelled demand still accommodated`}
+              className="pointer-events-none absolute top-[7px] h-[14px] w-[2px] -translate-x-1/2 rounded-full bg-amber"
+              style={{ left: `calc(10px + (100% - 20px) * ${scenario.maxConversionPctWithoutShortfall / 100})` }}
+            />
+          )}
+        </div>
         <div className="flex justify-between font-mono text-[10px] text-dim" aria-hidden>
           <span>0%</span>
           <span>50%</span>
           <span>100%</span>
         </div>
+        {scenario.maxConversionPctWithoutShortfall >= 0 && (
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-dim">
+            <span aria-hidden className="inline-block h-2.5 w-[2px] rounded-full bg-amber" />
+            Parking demand still met up to {scenario.maxConversionPctWithoutShortfall}% (illustrative)
+          </p>
+        )}
         <p className="mt-3 text-[13px] tabular-nums text-mute">
           <span className="text-ink">{scenario.convertedCount}</span> of {scenario.totalSpaces} spaces become planted
           areas.
@@ -167,8 +186,8 @@ export function ControlsPanel({
       <section className="rounded-lg border border-line bg-bg/60 p-4">
         <h2 className="mb-2 text-[13px] font-medium">What this slider changes</h2>
         <p className="text-[13px] leading-relaxed text-mute">
-          Each step converts surface parking stalls ({ASSUMPTIONS.areaPerSpaceM2} m² each) into planted strips, starting
-          with the lot edges and working inward. The same stall IDs drive the 3D scene and every number on the right.
+          Converts parking stalls ({ASSUMPTIONS.areaPerSpaceM2} m² each) into planted strips, lot edges first. The 3D
+          scene and every number on the right use the same stalls.
         </p>
       </section>
     </aside>

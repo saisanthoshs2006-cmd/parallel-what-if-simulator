@@ -1,5 +1,15 @@
 import { Workspace } from "@/components/Workspace";
+import { searchParamsToScenario } from "@/lib/simulation/scenario-url";
 
-export default function Page() {
-  return <Workspace />;
+/**
+ * Reads the scenario from the URL on the server so a shared link renders the correct state in
+ * the very first paint (no baseline flash). This makes the route dynamic rather than static.
+ */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const initial = searchParamsToScenario(await searchParams);
+  return <Workspace initial={initial} />;
 }

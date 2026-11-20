@@ -10,8 +10,9 @@ import type { CameraPreset } from "@/store/simulation-store";
 import { CameraRig } from "./CameraRig";
 import { Environment } from "./Environment";
 import { ParkingLots } from "./Parking";
-import { PlantedTrees, StreetTrees } from "./Trees";
+import { Trees } from "./Trees";
 import { Traffic } from "./Traffic";
+import { buildStallTargets, buildTreeTargets } from "./instanceTargets";
 import { COLORS } from "./palette";
 
 interface SceneProps {
@@ -22,14 +23,21 @@ interface SceneProps {
 }
 
 export function Scene({ sim, stage, camera }: SceneProps) {
-  const convertedIds = useMemo(() => new Set(sim.convertedIds), [sim.convertedIds]);
-  const activeTreeIds = useMemo(() => new Set(sim.trees.map((t) => t.id)), [sim.trees]);
+  const stallTargets = useMemo(() => buildStallTargets(CITY, sim), [sim]);
   const potentialTrees = useMemo(() => simulate(100).trees, []);
+  const treeTargets = useMemo(
+    () =>
+      buildTreeTargets(
+        potentialTrees.map((t) => t.id),
+        new Set(sim.trees.map((t) => t.id)),
+      ),
+    [potentialTrees, sim.trees],
+  );
 
   return (
     <>
       <color attach="background" args={[COLORS.background]} />
-      <fog attach="fog" args={[COLORS.background, 220, 420]} />
+      <fog attach="fog" args={[COLORS.background, 320, 640]} />
       <hemisphereLight args={["#9bb4cf", "#1a1f24", 1.1]} />
       <ambientLight intensity={0.25} />
       <directionalLight
@@ -47,16 +55,15 @@ export function Scene({ sim, stage, camera }: SceneProps) {
         shadow-bias={-0.0004}
       />
       <Environment layout={CITY} />
-      <ParkingLots layout={CITY} convertedIds={convertedIds} />
-      <StreetTrees layout={CITY} />
-      <PlantedTrees potential={potentialTrees} activeIds={activeTreeIds} stage={stage} />
+      <ParkingLots layout={CITY} targets={stallTargets} />
+      <Trees layout={CITY} potential={potentialTrees} planted={treeTargets} stage={stage} />
       <Traffic layout={CITY} />
       <OrbitControls
         makeDefault
         enableDamping
         dampingFactor={0.08}
         minDistance={25}
-        maxDistance={260}
+        maxDistance={520}
         maxPolarAngle={Math.PI / 2.15}
         zoomSpeed={0.7}
       />
