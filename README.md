@@ -1,101 +1,87 @@
 # Parallel — Rewrite Your City
 
-An interactive urban what-if simulator. Convert surface parking into green space in a **fictional demonstration neighborhood** and watch the 3D city and the metrics change together. Every outcome is a deterministic, explainable consequence of explicit assumptions.
+An interactive urban what-if simulator. Convert surface parking into green space in a **fictional demonstration neighborhood** and see the 3D city, the green-space metrics and the parking trade-off change together.
 
-> Default question: *"What if we converted 40% of neighborhood parking into green space?"*
+**Live demo:** _add your Vercel URL here after deploying (see "Deploy")._
 
-## Quick start
+> Everything is illustrative. The neighborhood is fictional and every number comes from the explicit assumptions below, not from real-world measurements or predictions.
+
+## Problem and solution
+
+Planning debates about parking are hard to picture: people argue about "what if we removed 40% of parking?" without seeing it or its cost. Parallel makes the decision visible and explainable. Drag one slider and watch stalls turn into planted strips while a parking-pressure indicator shows when assumed demand no longer fits. A Compare mode lets you drag a divider across the same city to see baseline and scenario side by side.
+
+## Core features
+
+- **Conversion slider (0–100%)** — deterministic: the same slider value always converts the same stalls.
+- **Green space metrics** — added green area, trees planted, canopy at maturity.
+- **Parking pressure** — retained spaces vs an assumed demand of 104 cars; shows the last level (28%) where demand still fits and marks unhoused cars in amber.
+- **Before / After / Compare** — Compare puts a draggable divider through the 3D viewport (baseline left, scenario right, one shared camera).
+- **Demos** — *Play 40% demo* and *Play reveal*, both cancellable; they jump between states under `prefers-reduced-motion`.
+- **Shareable links** — state lives in the URL, e.g. `/?conversion=40&view=compare&split=62`.
+- **Accessible controls** — labelled slider and divider, keyboard operation, reduced-motion support.
+
+## Technology
+
+Next.js 15 (App Router) · TypeScript · React Three Fiber / three.js · Zustand · Tailwind CSS 4 · Motion · Lucide · Vitest.
+The 3D scene uses instanced meshes (about 42 draw calls, 84 while comparing).
+
+## Run locally
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
+npm run dev          # http://localhost:3000
+npm run lint && npm run typecheck && npm test
+npm run build && npm start
 ```
 
-| Command | Purpose |
+Requires Node 20+ and a WebGL-capable browser (a clear fallback is shown otherwise; the metrics still work).
+
+## Simulation assumptions and limitations
+
+All values live in [`lib/config/assumptions.ts`](lib/config/assumptions.ts):
+
+| Assumption | Value |
 | --- | --- |
-| `npm run dev` | Dev server |
-| `npm run build && npm start` | Production build |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript |
-| `npm test` | Vitest (simulation, URL codec, store) |
+| Area per parking space | 12.5 m² (stall only; aisles stay) |
+| Plantable share of converted area | 70% |
+| Planting density | 1 tree per 30 m² of plantable area |
+| Mature canopy per tree | 20 m² |
+| Existing street-tree canopy | 20 m² per tree |
+| Illustrative parking demand | 104 cars (about 72% of 144 spaces) |
 
-Requires Node 20+ and a WebGL-capable browser (a clear fallback is shown otherwise; metrics still work).
+Model: converted stalls = first N of a fixed order (N = round(pct × 144 / 100)); green area = N × 12.5 × 0.7; trees = floor(green ÷ 30); canopy = trees × 20; unaccommodated demand = max(0, 104 − retained spaces).
 
-## The ten-step flow
-
-1. Open the app → 3D neighborhood loads at baseline (0%).
-2. Move the **Parking converted to green** slider (0–100%).
-3. Stalls rise into planted strips and trees grow in; cars on converted stalls disappear.
-4. Metrics, bars and the response curve update immediately.
-5. **Before / After** toggle (sidebar or top of the scene) flips between baseline and scenario.
-6. **Reset** returns to baseline. **Play 40% demo** runs the scripted scenario.
-7. **Compare** (third View option) shows a draggable divider through the 3D city: baseline on the left, the selected scenario on the right, one shared camera. **Play reveal** runs the scripted version.
-8. **Share** copies a URL such as `/?conversion=40&view=after&canopy=mature` (or `…&view=compare&split=62`); opening it restores the same state.
+Limitations:
+- Fictional neighborhood; no real city data.
+- Outputs are arithmetic consequences of the assumptions, not predictions or measurements.
+- No claims about temperature, air quality, stormwater, health, traffic or cost.
+- "Without a space" is a shortfall indicator only; it does not predict where cars would go.
+- Tree survival, species and overlapping crowns are ignored; canopy is shown at maturity.
+- Existing street trees render as small dots for visual simplicity while the metrics assume a 20 m² canopy each.
 
 ## Architecture
 
 ```
-app/                  Next.js App Router (layout, page, Tailwind theme)
-components/
-  Workspace.tsx       3-column workspace; computes simulations once per state
-  city/               React Three Fiber scene (environment, parking, trees, traffic, camera,
-                      CompareRenderer + CompareDivider for the before/after reveal)
-  simulation/         Controls panel, insights panel, parking-pressure card
-  ui/                 Segmented control, tags, animated number
-lib/
-  config/assumptions.ts   ← every model number, with units and notes
-  simulation/
-    layout.ts         Deterministic neighborhood: blocks, buildings, 144 stalls, conversion order
-    engine.ts         Pure simulate(pct) → metrics + converted IDs + planted trees
-    scenario-url.ts   Serialise / parse / clamp scenario query params
-    prng.ts           Seeded PRNG + string hash
-store/                Zustand store (vanilla factory + app singleton)
-hooks/                URL sync, scripted demo player
-tests/                Vitest suites
+app/                  Next.js App Router
+components/city/      3D scene: environment, instanced parking/trees/traffic, camera, Compare renderer + divider
+components/simulation Controls and insights panels
+lib/simulation/       Pure deterministic engine, layout, URL codec
+lib/config/           Assumptions and feature switch
+store/                Per-request Zustand store
+hooks/                URL sync and demo playback
+tests/                Vitest suites (engine, URL, store, instancing targets, camera framing, compare)
 ```
 
-**Single source of truth.** The scene never decides what is converted. `Workspace` calls `simulate(pct)`; the returned `convertedIds` and `trees` drive both the 3D stalls/trees and the numbers. The neighborhood is generated once from a fixed seed and never regenerated when the slider moves.
+Compare mode renders one scene twice per frame with the same camera, scissored at the divider, using three.js layers for the scenario-dependent copies. `COMPARE_ENABLED` in `lib/config/features.ts` turns it off.
 
-### Simulation model
-
-1. **Which stalls convert:** the first *N* IDs of a fixed order (perimeter rows first, then by column, interleaved across lots). *N = round(pct × 144 / 100)*. Monotonic: raising the slider never un-converts a stall.
-2. **Converted area** = N × 12.5 m².
-3. **Green area** = converted area × 0.7 (plantable share).
-4. **Trees** = floor(green area ÷ 30 m² per tree). Tree *k* is hosted by a fixed stall, so trees don't jump around.
-5. **Added canopy at maturity** = trees × 20 m² (crown projection).
-
-6. **Parking pressure (illustrative):** assumed demand is 104 cars (≈72% of 144 stalls, an assumption in `assumptions.ts`). Without a space = max(0, demand − retained). The largest conversion with no shortfall is 28% (40 spaces); the first shortfall is at 29%. Baseline cars sit in a fixed hash-ranked set of stalls; a car whose stall is converted moves to an empty retained stall if one exists, otherwise it is shown as an amber translucent “ghost” car on its former stall.
-
-All values are in [`lib/config/assumptions.ts`](lib/config/assumptions.ts).
-
-### Compare mode (the reveal)
-
-One canvas, one scene, one camera. Shared geometry (environment, buildings, traffic, street trees,
-lighting) is on three.js layer 0; the scenario-dependent parts (stall strips, parked cars, amber
-markers, lot labels, planted trees) are instanced and mounted twice in Compare mode — a baseline copy
-on layer 1 and a scenario copy on layer 2. `CompareRenderer` then draws the scene twice per frame
-with the same full-canvas viewport, scissored at the divider (left pass sees layers 0+1, right pass
-0+2). Shadows follow the same layers, so each side only casts its own. The divider is a DOM overlay
-(`CompareDivider`, a real slider with pointer, touch and keyboard support). Outside Compare mode the
-renderer is not mounted and nothing is drawn twice. `COMPARE_ENABLED` in `lib/config/features.ts`
-switches the whole feature off. Metrics always show the scenario (the right-hand side).
-
-### What is and isn't claimed
-
-- **Model outputs** — computed by the engine from the assumptions.
-- **Assumptions** — inputs we chose (listed in the UI).
-- **Real-world measurements** — none. The neighborhood is fictional.
-- No claims about temperature, air quality, stormwater, health, traffic or cost.
-- Parking demand is a single assumed number. “Without a space” is a shortfall indicator, not a prediction of displacement, circling, spillover or traffic; the amber ghost cars are an illustration, not a vehicle simulation.
-
-## Deploy to Vercel
+## Deploy (Vercel)
 
 1. Push the repo to GitHub.
-2. In Vercel: **Add New → Project**, import the repo. Framework preset: **Next.js** (auto-detected).
-3. No environment variables are required. Deploy.
+2. In Vercel: **Add New → Project**, import the repo (Next.js is auto-detected; no environment variables needed) and deploy.
+3. Or with the CLI: `npx vercel` then `npx vercel --prod`.
 
-Or with the CLI: `npx vercel` then `npx vercel --prod`.
+The page is rendered per request so shared links show the right scenario on first paint.
 
 ## Demo
 
-See [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) for a three-minute script.
+See [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) for the 90-second script (and the longer three-minute version in git history). To see it yourself: open the app, click **Play reveal**, then drag the divider.
