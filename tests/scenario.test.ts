@@ -11,7 +11,7 @@ import { simulate } from "@/lib/simulation/engine";
 
 describe("scenario URL", () => {
   it("round-trips state", () => {
-    const s: ScenarioState = { name: "Pilot & test", conversionPct: 63, view: "before", canopy: "sapling" };
+    const s: ScenarioState = { name: "Pilot & test", conversionPct: 63, view: "before", canopy: "sapling", split: 50 };
     expect(parseScenario(serializeScenario(s))).toEqual(s);
   });
   it("round-trips the demo and default scenarios", () => {
@@ -46,8 +46,8 @@ describe("store", () => {
     store.getState().setView("before");
     store.getState().setName("Custom");
     store.getState().reset();
-    const { conversionPct, view, name, canopy } = store.getState();
-    expect({ conversionPct, view, name, canopy }).toEqual(DEFAULT_SCENARIO);
+    const { conversionPct, view, name, canopy, split } = store.getState();
+    expect({ conversionPct, view, name, canopy, split }).toEqual(DEFAULT_SCENARIO);
   });
   it("loadDemo sets the predefined 40% scenario", () => {
     const store = createSimulationStore();

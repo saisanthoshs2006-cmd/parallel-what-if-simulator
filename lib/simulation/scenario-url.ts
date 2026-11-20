@@ -1,7 +1,8 @@
 import { DEMO_SCENARIO } from "@/lib/config/assumptions";
+import { COMPARE_ENABLED } from "@/lib/config/features";
 import { clampPct } from "./engine";
 
-export type ViewMode = "before" | "after";
+export type ViewMode = "before" | "after" | "compare";
 export type CanopyStage = "sapling" | "mature";
 
 export interface ScenarioState {
@@ -9,16 +10,28 @@ export interface ScenarioState {
   conversionPct: number;
   view: ViewMode;
   canopy: CanopyStage;
+  /** Compare-mode divider position, whole percent of the viewport width (baseline on the left). */
+  split: number;
 }
 
 export const DEFAULT_SCENARIO_NAME = "Parking to green";
 export const MAX_NAME_LENGTH = 60;
+export const SPLIT_MIN = 3;
+export const SPLIT_MAX = 97;
+export const DEFAULT_SPLIT = 50;
+
+/** Clamp a divider position to the draggable range; non-finite input → centre. */
+export function clampSplit(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_SPLIT;
+  return Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, Math.round(value)));
+}
 
 export const DEFAULT_SCENARIO: ScenarioState = {
   name: DEFAULT_SCENARIO_NAME,
   conversionPct: 0,
   view: "after",
   canopy: "mature",
+  split: DEFAULT_SPLIT,
 };
 
 export const DEMO_STATE: ScenarioState = {
@@ -26,6 +39,7 @@ export const DEMO_STATE: ScenarioState = {
   conversionPct: DEMO_SCENARIO.conversionPct,
   view: "after",
   canopy: "mature",
+  split: DEFAULT_SPLIT,
 };
 
 export function sanitizeName(raw: string): string {
@@ -38,6 +52,7 @@ export function serializeScenario(s: ScenarioState): string {
   p.set("conversion", String(clampPct(s.conversionPct)));
   p.set("view", s.view);
   p.set("canopy", s.canopy);
+  if (s.view === "compare") p.set("split", String(clampSplit(s.split)));
   const name = sanitizeName(s.name).trim();
   if (name && name !== DEFAULT_SCENARIO_NAME) p.set("name", name);
   return p.toString();
@@ -50,12 +65,18 @@ export function parseScenario(search: string | URLSearchParams): ScenarioState {
   const pct = rawPct !== null && rawPct.trim() !== "" ? Number(rawPct) : NaN;
   const view = p.get("view");
   const canopy = p.get("canopy");
+  const rawSplit = p.get("split");
+  const split = rawSplit !== null && rawSplit.trim() !== "" ? Number(rawSplit) : NaN;
   const name = sanitizeName(p.get("name") ?? "").trim();
   return {
     name: name || DEFAULT_SCENARIO.name,
     conversionPct: Number.isFinite(pct) ? clampPct(pct) : DEFAULT_SCENARIO.conversionPct,
-    view: view === "before" || view === "after" ? view : DEFAULT_SCENARIO.view,
+    view:
+      view === "before" || view === "after" || (view === "compare" && COMPARE_ENABLED)
+        ? view
+        : DEFAULT_SCENARIO.view,
     canopy: canopy === "sapling" || canopy === "mature" ? canopy : DEFAULT_SCENARIO.canopy,
+    split: Number.isFinite(split) ? clampSplit(split) : DEFAULT_SPLIT,
   };
 }
 

@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { Crosshair, Focus } from "lucide-react";
 import { SimulationStoreProvider, useSim } from "@/store/simulation-store";
 import type { ScenarioState } from "@/lib/simulation/scenario-url";
+import { COMPARE_ENABLED } from "@/lib/config/features";
 import { simulate } from "@/lib/simulation/engine";
 import { useUrlSync } from "@/hooks/useUrlSync";
 import { useDemo } from "@/hooks/useDemo";
@@ -69,6 +70,7 @@ function WorkspaceInner() {
               options={[
                 { value: "before", label: "Before" },
                 { value: "after", label: `After · ${pct}%` },
+                ...(COMPARE_ENABLED ? [{ value: "compare" as const, label: "Compare" }] : []),
               ]}
               className="bg-bg/85"
             />

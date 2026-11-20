@@ -6,6 +6,7 @@ import { ASSUMPTION_LIST, LIMITATIONS } from "@/lib/config/assumptions";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { Tag } from "@/components/ui/Tag";
 import { ParkingPressure } from "./ParkingPressure";
+import type { ViewMode } from "@/lib/simulation/scenario-url";
 
 function Metric({
   label,
@@ -51,7 +52,7 @@ export function InsightsPanel({
   active: SimulationResult;
   baseline: SimulationResult;
   scenario: SimulationResult;
-  view: "before" | "after";
+  view: ViewMode;
 }) {
   const dCanopy = active.totalCanopyM2 - baseline.totalCanopyM2;
   return (
@@ -63,7 +64,12 @@ export function InsightsPanel({
         <div>
           <h2 className="text-base font-semibold tracking-tight">Simulation insights</h2>
           <p className="mt-1 text-[12px] text-mute">
-            {view === "before" ? "Baseline" : `${scenario.conversionPct}% scenario`} · fictional neighborhood
+            {view === "before"
+              ? "Baseline"
+              : view === "compare"
+                ? `Baseline vs ${scenario.conversionPct}% scenario`
+                : `${scenario.conversionPct}% scenario`}{" "}
+            · fictional neighborhood
           </p>
         </div>
         <span
@@ -71,7 +77,7 @@ export function InsightsPanel({
             view === "before" ? "border-amber/40 text-amber" : "border-leaf/40 text-leaf"
           }`}
         >
-          {view === "before" ? "Baseline" : "Scenario"}
+          {view === "before" ? "Baseline" : view === "compare" ? "Compare" : "Scenario"}
         </span>
       </header>
 

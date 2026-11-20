@@ -6,6 +6,7 @@ import { useSim, useSimStoreApi } from "@/store/simulation-store";
 import { buildShareUrl } from "@/lib/simulation/scenario-url";
 import { ASSUMPTIONS } from "@/lib/config/assumptions";
 import { MAX_NAME_LENGTH } from "@/lib/simulation/scenario-url";
+import { COMPARE_ENABLED } from "@/lib/config/features";
 import type { SimulationResult } from "@/lib/simulation/types";
 import { Segmented } from "@/components/ui/Segmented";
 
@@ -132,6 +133,7 @@ export function ControlsPanel({
             options={[
               { value: "before", label: "Before (baseline)" },
               { value: "after", label: "After (scenario)" },
+              ...(COMPARE_ENABLED ? [{ value: "compare" as const, label: "Compare" }] : []),
             ]}
           />
         </div>

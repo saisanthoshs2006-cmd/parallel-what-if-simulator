@@ -6,6 +6,7 @@ import { clampPct } from "@/lib/simulation/engine";
 import {
   DEFAULT_SCENARIO,
   DEMO_STATE,
+  clampSplit,
   sanitizeName,
   type ScenarioState,
   type ViewMode,
@@ -20,6 +21,8 @@ export interface SimulationStore extends ScenarioState {
   hydrated: boolean;
   setConversion: (pct: number) => void;
   setView: (view: ViewMode) => void;
+  /** Move the Compare divider (whole percent, clamped). */
+  setSplit: (pct: number) => void;
   setCanopy: (c: ScenarioState["canopy"]) => void;
   setName: (name: string) => void;
   hydrate: (s: ScenarioState) => void;
@@ -32,11 +35,12 @@ export interface SimulationStore extends ScenarioState {
 export function createSimulationStore(initial?: ScenarioState) {
   return createStore<SimulationStore>()((set, get) => ({
     ...DEFAULT_SCENARIO,
-    ...(initial ? { ...initial, conversionPct: clampPct(initial.conversionPct) } : {}),
+    ...(initial ? { ...initial, conversionPct: clampPct(initial.conversionPct), split: clampSplit(initial.split) } : {}),
     camera: { preset: "overview", nonce: 0 },
     hydrated: initial !== undefined,
     setConversion: (pct) => set({ conversionPct: clampPct(pct) }),
     setView: (view) => set({ view }),
+    setSplit: (pct) => set({ split: clampSplit(pct) }),
     setCanopy: (canopy) => set({ canopy }),
     setName: (name) => set({ name: sanitizeName(name) }),
     hydrate: (s) =>
@@ -45,6 +49,7 @@ export function createSimulationStore(initial?: ScenarioState) {
         conversionPct: clampPct(s.conversionPct),
         view: s.view,
         canopy: s.canopy,
+        split: clampSplit(s.split),
         hydrated: true,
       }),
     frame: (preset) => set({ camera: { preset, nonce: get().camera.nonce + 1 } }),

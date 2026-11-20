@@ -16,7 +16,8 @@ export function useUrlSync() {
         s.conversionPct === prev.conversionPct &&
         s.view === prev.view &&
         s.canopy === prev.canopy &&
-        s.name === prev.name
+        s.name === prev.name &&
+        s.split === prev.split
       )
         return;
       window.history.replaceState(null, "", `${window.location.pathname}?${serializeScenario(s)}`);
