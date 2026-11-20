@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { Crosshair, Focus } from "lucide-react";
-import { SimulationStoreProvider, useSim } from "@/store/simulation-store";
+import { SimulationStoreProvider, useSim, useSimStoreApi } from "@/store/simulation-store";
 import type { ScenarioState } from "@/lib/simulation/scenario-url";
 import { COMPARE_ENABLED } from "@/lib/config/features";
 import { simulate } from "@/lib/simulation/engine";
@@ -25,6 +25,7 @@ const CityCanvas = dynamic(() => import("./city/CityCanvas"), {
 function WorkspaceInner() {
   useUrlSync();
   const demo = useDemo();
+  const store = useSimStoreApi();
   const pct = useSim((s) => s.conversionPct);
   const view = useSim((s) => s.view);
   const canopy = useSim((s) => s.canopy);
@@ -41,7 +42,14 @@ function WorkspaceInner() {
       <ControlsPanel scenario={scenario} demo={demo} />
 
       <section aria-label="3D neighborhood" className="sticky top-0 z-20 order-first h-[46vh] min-h-[300px] shrink-0 lg:relative lg:order-none lg:h-auto lg:min-h-0">
-        <CityCanvas sim={active} stage={canopy} camera={camera} />
+        <CityCanvas
+          sim={active}
+          baselineSim={baseline}
+          compare={COMPARE_ENABLED && view === "compare"}
+          store={store}
+          stage={canopy}
+          camera={camera}
+        />
 
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
           <div className="flex flex-col items-start gap-2">

@@ -5,7 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { AlertTriangle } from "lucide-react";
 import type { SimulationResult } from "@/lib/simulation/types";
 import type { CanopyStage } from "@/lib/simulation/scenario-url";
-import type { CameraPreset } from "@/store/simulation-store";
+import type { CameraPreset, SimulationStoreApi } from "@/store/simulation-store";
 import { Scene } from "./Scene";
 import { framePreset } from "./cameraFraming";
 
@@ -56,11 +56,14 @@ function Loading() {
 
 interface Props {
   sim: SimulationResult;
+  baselineSim: SimulationResult;
+  compare: boolean;
+  store: SimulationStoreApi;
   stage: CanopyStage;
   camera: { preset: CameraPreset; nonce: number };
 }
 
-export default function CityCanvas({ sim, stage, camera }: Props) {
+export default function CityCanvas({ sim, baselineSim, compare, store, stage, camera }: Props) {
   const [ok, setOk] = useState<boolean | null>(null);
   useEffect(() => setOk(webglAvailable()), []);
 
@@ -77,7 +80,7 @@ export default function CityCanvas({ sim, stage, camera }: Props) {
           gl={{ antialias: true, powerPreference: "high-performance" }}
           aria-label="Interactive 3D view of the fictional demonstration neighborhood. Drag to orbit, scroll to zoom."
         >
-          <Scene sim={sim} stage={stage} camera={camera} />
+          <Scene sim={sim} baselineSim={baselineSim} compare={compare} store={store} stage={stage} camera={camera} />
         </Canvas>
       </Suspense>
     </Boundary>
