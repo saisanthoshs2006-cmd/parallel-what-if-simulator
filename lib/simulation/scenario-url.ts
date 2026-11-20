@@ -15,6 +15,7 @@ export interface ScenarioState {
 }
 
 export const DEFAULT_SCENARIO_NAME = "Parking to green";
+const LEGACY_DEMO_NAME = "Convert 40% of parking to green space";
 export const MAX_NAME_LENGTH = 60;
 export const SPLIT_MIN = 3;
 export const SPLIT_MAX = 97;
@@ -46,6 +47,11 @@ export function sanitizeName(raw: string): string {
   return raw.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, MAX_NAME_LENGTH);
 }
 
+/** Old demo links used a fixed percentage in the title. Keep that title only at 40%. */
+export function normalizeScenarioName(name: string, conversionPct: number): string {
+  return name === LEGACY_DEMO_NAME && clampPct(conversionPct) !== 40 ? DEFAULT_SCENARIO_NAME : name;
+}
+
 /** Serialise to a query string (no leading "?"). Always explicit, so links are self-describing. */
 export function serializeScenario(s: ScenarioState): string {
   const p = new URLSearchParams();
@@ -53,7 +59,7 @@ export function serializeScenario(s: ScenarioState): string {
   p.set("view", s.view);
   p.set("canopy", s.canopy);
   if (s.view === "compare") p.set("split", String(clampSplit(s.split)));
-  const name = sanitizeName(s.name).trim();
+  const name = normalizeScenarioName(sanitizeName(s.name).trim(), s.conversionPct);
   if (name && name !== DEFAULT_SCENARIO_NAME) p.set("name", name);
   return p.toString();
 }
@@ -69,7 +75,7 @@ export function parseScenario(search: string | URLSearchParams): ScenarioState {
   const split = rawSplit !== null && rawSplit.trim() !== "" ? Number(rawSplit) : NaN;
   const name = sanitizeName(p.get("name") ?? "").trim();
   return {
-    name: name || DEFAULT_SCENARIO.name,
+    name: normalizeScenarioName(name || DEFAULT_SCENARIO.name, Number.isFinite(pct) ? pct : 0),
     conversionPct: Number.isFinite(pct) ? clampPct(pct) : DEFAULT_SCENARIO.conversionPct,
     view:
       view === "before" || view === "after" || (view === "compare" && COMPARE_ENABLED)

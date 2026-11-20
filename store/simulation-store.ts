@@ -7,6 +7,7 @@ import {
   DEFAULT_SCENARIO,
   DEMO_STATE,
   clampSplit,
+  normalizeScenarioName,
   sanitizeName,
   type ScenarioState,
   type ViewMode,
@@ -35,17 +36,25 @@ export interface SimulationStore extends ScenarioState {
 export function createSimulationStore(initial?: ScenarioState) {
   return createStore<SimulationStore>()((set, get) => ({
     ...DEFAULT_SCENARIO,
-    ...(initial ? { ...initial, conversionPct: clampPct(initial.conversionPct), split: clampSplit(initial.split) } : {}),
+    ...(initial ? {
+      ...initial,
+      name: normalizeScenarioName(initial.name, initial.conversionPct),
+      conversionPct: clampPct(initial.conversionPct),
+      split: clampSplit(initial.split),
+    } : {}),
     camera: { preset: "overview", nonce: 0 },
     hydrated: initial !== undefined,
-    setConversion: (pct) => set({ conversionPct: clampPct(pct) }),
+    setConversion: (pct) => set((s) => {
+      const conversionPct = clampPct(pct);
+      return { conversionPct, name: normalizeScenarioName(s.name, conversionPct) };
+    }),
     setView: (view) => set({ view }),
     setSplit: (pct) => set({ split: clampSplit(pct) }),
     setCanopy: (canopy) => set({ canopy }),
     setName: (name) => set({ name: sanitizeName(name) }),
     hydrate: (s) =>
       set({
-        name: s.name,
+        name: normalizeScenarioName(s.name, s.conversionPct),
         conversionPct: clampPct(s.conversionPct),
         view: s.view,
         canopy: s.canopy,

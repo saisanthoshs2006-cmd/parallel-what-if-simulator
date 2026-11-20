@@ -67,7 +67,7 @@ export function InsightsPanel({
             {view === "before"
               ? "Baseline"
               : view === "compare"
-                ? `Baseline vs ${scenario.conversionPct}% scenario`
+                ? `${scenario.conversionPct}% scenario shown on right`
                 : `${scenario.conversionPct}% scenario`}{" "}
             · fictional neighborhood
           </p>

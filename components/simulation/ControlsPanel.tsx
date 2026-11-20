@@ -1,14 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { ChevronsLeftRight, Check, Link2, Play, RotateCcw, Square } from "lucide-react";
 import { useSim, useSimStoreApi } from "@/store/simulation-store";
-import { buildShareUrl } from "@/lib/simulation/scenario-url";
-import { ASSUMPTIONS } from "@/lib/config/assumptions";
 import { MAX_NAME_LENGTH } from "@/lib/simulation/scenario-url";
 import { COMPARE_ENABLED } from "@/lib/config/features";
 import type { SimulationResult } from "@/lib/simulation/types";
 import { Segmented } from "@/components/ui/Segmented";
+import { useShareScenario } from "@/hooks/useShareScenario";
 
 export function ControlsPanel({
   scenario,
@@ -27,27 +25,14 @@ export function ControlsPanel({
   const pct = useSim((s) => s.conversionPct);
   const view = useSim((s) => s.view);
   const canopy = useSim((s) => s.canopy);
-  const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
+  const { copied, share } = useShareScenario();
   const api = useSimStoreApi();
   const st = api.getState;
-
-  async function share() {
-    const s = st();
-    const url = buildShareUrl(window.location.origin, window.location.pathname, s);
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied("ok");
-    } catch {
-      window.prompt("Copy this scenario link:", url);
-      setCopied("fail");
-    }
-    setTimeout(() => setCopied("idle"), 2200);
-  }
 
   return (
     <aside
       aria-label="Scenario controls"
-      className="scroll-thin flex flex-col gap-7 overflow-y-auto border-b border-line bg-panel p-6 lg:border-r lg:border-b-0"
+      className="scroll-thin flex min-w-0 flex-col gap-5 overflow-y-auto border-b border-line bg-panel/95 p-5 lg:border-r lg:border-b-0"
     >
       <header>
         <div className="flex items-center gap-2.5">
@@ -59,7 +44,7 @@ export function ControlsPanel({
           </svg>
           <h1 className="text-lg font-semibold tracking-tight">Parallel</h1>
         </div>
-        <p className="mt-1.5 text-[13px] text-mute">Rewrite your city. Explore tomorrow.</p>
+        <p className="mt-1.5 text-xs text-mute">Rewrite your city.</p>
       </header>
 
       <div>
@@ -129,32 +114,20 @@ export function ControlsPanel({
         </p>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <div>
-          <div className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-dim">View</div>
-          <Segmented
-            label="Compare baseline and scenario"
-            value={view}
-            onChange={(v) => st().setView(v)}
-            options={[
-              { value: "before", label: "Before (baseline)" },
-              { value: "after", label: "After (scenario)" },
-              ...(COMPARE_ENABLED ? [{ value: "compare" as const, label: "Compare" }] : []),
-            ]}
-          />
-        </div>
-        <div>
-          <div className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-dim">Tree size shown</div>
-          <Segmented
-            label="Tree size in 3D view"
-            value={canopy}
-            onChange={(v) => st().setCanopy(v)}
-            options={[
-              { value: "sapling", label: "Newly planted" },
-              { value: "mature", label: "At maturity" },
-            ]}
-          />
-        </div>
+      <section>
+        <div className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-dim">Tree size shown</div>
+        <Segmented
+          label="Tree size in 3D view"
+          value={canopy}
+          onChange={(v) => {
+            demo.stop();
+            st().setCanopy(v);
+          }}
+          options={[
+            { value: "sapling", label: "Newly planted" },
+            { value: "mature", label: "At maturity" },
+          ]}
+        />
       </section>
 
       <section className="flex flex-col gap-2.5">
@@ -196,20 +169,12 @@ export function ControlsPanel({
             onClick={share}
             className="flex items-center justify-center gap-2 rounded-lg border border-line px-3 py-2 text-sm text-ink transition hover:bg-raised"
           >
-            {copied === "ok" ? <Check className="h-3.5 w-3.5 text-leaf" aria-hidden /> : <Link2 className="h-3.5 w-3.5" aria-hidden />}
-            {copied === "ok" ? "Link copied" : "Share"}
+            {copied ? <Check className="h-3.5 w-3.5 text-leaf" aria-hidden /> : <Link2 className="h-3.5 w-3.5" aria-hidden />}
+            {copied ? "Link copied" : "Share"}
           </button>
         </div>
         <p className="sr-only" role="status">
-          {copied === "ok" ? "Scenario link copied to clipboard" : ""}
-        </p>
-      </section>
-
-      <section className="rounded-lg border border-line bg-bg/60 p-4">
-        <h2 className="mb-2 text-[13px] font-medium">What this slider changes</h2>
-        <p className="text-[13px] leading-relaxed text-mute">
-          Converts parking stalls ({ASSUMPTIONS.areaPerSpaceM2} m² each) into planted strips, lot edges first. The 3D
-          scene and every number on the right use the same stalls.
+          {copied ? "Scenario link copied to clipboard" : ""}
         </p>
       </section>
     </aside>

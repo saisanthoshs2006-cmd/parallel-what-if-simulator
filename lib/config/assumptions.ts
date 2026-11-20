@@ -88,7 +88,7 @@ export const LIMITATIONS: string[] = [
 
 /** The predefined hackathon scenario. */
 export const DEMO_SCENARIO = {
-  name: "Convert 40% of parking to green space",
+  name: "Parking to green",
   conversionPct: 40,
 } as const;
 

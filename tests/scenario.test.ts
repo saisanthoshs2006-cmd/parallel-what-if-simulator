@@ -30,6 +30,11 @@ describe("scenario URL", () => {
     const restored = parseScenario("conversion=40&view=after");
     expect(simulate(restored.conversionPct)).toEqual(simulate(40));
   });
+  it("repairs an old percentage-specific demo title on a different conversion", () => {
+    const restored = parseScenario("conversion=100&view=compare&split=63&name=Convert+40%25+of+parking+to+green+space");
+    expect(restored).toMatchObject({ conversionPct: 100, view: "compare", split: 63, name: DEFAULT_SCENARIO.name });
+    expect(parseScenario(serializeScenario(restored))).toEqual(restored);
+  });
 });
 
 describe("store", () => {
@@ -54,6 +59,14 @@ describe("store", () => {
     store.getState().loadDemo();
     expect(store.getState().conversionPct).toBe(40);
     expect(store.getState().view).toBe("after");
+    store.getState().setConversion(100);
+    expect(store.getState().name).toBe(DEFAULT_SCENARIO.name);
+  });
+  it("keeps a custom scenario name when the slider changes", () => {
+    const store = createSimulationStore();
+    store.getState().setName("My neighborhood");
+    store.getState().setConversion(100);
+    expect(store.getState().name).toBe("My neighborhood");
   });
   it("hydrate restores a shared scenario", () => {
     const store = createSimulationStore();

@@ -33,6 +33,7 @@ const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2,
 export function useDemo() {
   const store = useSimStoreApi();
   const [mode, setMode] = useState<DemoMode>(null);
+  const [revealComplete, setRevealComplete] = useState(false);
   const raf = useRef<number | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -42,6 +43,7 @@ export function useDemo() {
     raf.current = null;
     timers.current = [];
     setMode(null);
+    setRevealComplete(false);
   }, []);
 
   /** Run `fn(k)` for k in 0..1 over `ms` (eased by `ease`), then `done`. */
@@ -75,7 +77,10 @@ export function useDemo() {
     [stop, store],
   );
 
-  const finish = useCallback(() => setMode(null), []);
+  const finish = useCallback((completedReveal = false) => {
+    setMode(null);
+    setRevealComplete(completedReveal);
+  }, []);
 
   /** Compare-mode tail of the reveal: sweep right→left, then settle in the middle. */
   const revealTail = useCallback(
@@ -87,7 +92,7 @@ export function useDemo() {
         later(STEP_MS, () => store.getState().setSplit(SPLIT_MIN)); // all scenario
         later(STEP_MS * 2, () => {
           store.getState().setSplit(50);
-          finish();
+          finish(true);
         });
         return;
       }
@@ -100,7 +105,7 @@ export function useDemo() {
               tween(
                 SETTLE_MS,
                 (k) => store.getState().setSplit(Math.round(SPLIT_MIN + (50 - SPLIT_MIN) * k)),
-                finish,
+                () => finish(true),
                 easeInOut,
               ),
             ),
@@ -146,5 +151,5 @@ export function useDemo() {
   const playReveal = useCallback(() => run("reveal"), [run]);
 
   useEffect(() => stop, [stop]);
-  return { playing: mode !== null, mode, play, playReveal, stop };
+  return { playing: mode !== null, mode, revealComplete, play, playReveal, stop };
 }

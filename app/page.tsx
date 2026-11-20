@@ -10,6 +10,8 @@ export default async function Page({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const initial = searchParamsToScenario(await searchParams);
-  return <Workspace initial={initial} />;
+  const params = await searchParams;
+  const initial = searchParamsToScenario(params);
+  const showIntro = !["conversion", "view", "canopy", "split", "name"].some((key) => params[key] !== undefined);
+  return <Workspace initial={initial} showIntro={showIntro} />;
 }
