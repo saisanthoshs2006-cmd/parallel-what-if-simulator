@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-bg: #0a0e13;
+  --color-panel: #0e1318;
+  --color-raised: #141a21;
+  --color-line: #1e262e;
+  --color-ink: #e7ecf1;
+  --color-mute: #8d99a6;
+  --color-dim: #5f6b78;
+  --color-leaf: #5fd38d;
+  --color-amber: #d9a441;
+  --font-sans: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Slider */
+input[type="range"].parallel-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+  --fill: 0%;
+}
+input[type="range"].parallel-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-leaf) var(--fill), #222b34 var(--fill));
+}
+input[type="range"].parallel-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #222b34;
+}
+input[type="range"].parallel-range::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-leaf);
+}
+input[type="range"].parallel-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: #f4f7f9;
+  border: 3px solid var(--color-leaf);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+input[type="range"].parallel-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f4f7f9;
+  border: 3px solid var(--color-leaf);
+}
+input[type="range"].parallel-range:focus-visible {
+  outline: none;
+}
+input[type="range"].parallel-range:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+input[type="range"].parallel-range:focus-visible::-moz-range-thumb {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-leaf);
+  outline-offset: 2px;
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #2a343e transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
