@@ -6,7 +6,10 @@ import {
   compareRegions,
   dependentMask,
   passMask,
+  splitFromKey,
+  splitFromPointer,
 } from "@/components/city/compareRegions";
+import { DEFAULT_SPLIT, SPLIT_MAX, SPLIT_MIN } from "@/lib/simulation/scenario-url";
 
 describe("compare layers", () => {
   it("uses distinct bits for shared, baseline and scenario geometry", () => {
@@ -56,5 +59,32 @@ describe("compareRegions", () => {
   });
   it("is deterministic", () => {
     expect(compareRegions(37, 913, 457)).toEqual(compareRegions(37, 913, 457));
+  });
+});
+
+describe("divider input", () => {
+  it("maps a pointer x to a clamped whole-percent position", () => {
+    expect(splitFromPointer(500, 100, 800)).toBe(50);
+    expect(splitFromPointer(100, 100, 800)).toBe(SPLIT_MIN); // far left clamps
+    expect(splitFromPointer(5000, 100, 800)).toBe(SPLIT_MAX); // far right clamps
+    expect(splitFromPointer(300, 100, 800)).toBe(25);
+  });
+  it("falls back to the centre for a degenerate element", () => {
+    expect(splitFromPointer(10, 0, 0)).toBe(DEFAULT_SPLIT);
+    expect(splitFromPointer(NaN, 0, 800)).toBe(DEFAULT_SPLIT);
+  });
+  it("steps with the arrow keys, bigger with Shift/PageUp/PageDown, and jumps with Home/End", () => {
+    expect(splitFromKey(50, "ArrowRight")).toBe(52);
+    expect(splitFromKey(50, "ArrowLeft")).toBe(48);
+    expect(splitFromKey(50, "ArrowRight", true)).toBe(60);
+    expect(splitFromKey(50, "PageDown")).toBe(40);
+    expect(splitFromKey(50, "Home")).toBe(SPLIT_MIN);
+    expect(splitFromKey(50, "End")).toBe(SPLIT_MAX);
+  });
+  it("never leaves the draggable range and ignores other keys", () => {
+    expect(splitFromKey(SPLIT_MAX, "ArrowRight", true)).toBe(SPLIT_MAX);
+    expect(splitFromKey(SPLIT_MIN, "ArrowLeft", true)).toBe(SPLIT_MIN);
+    expect(splitFromKey(50, "a")).toBeNull();
+    expect(splitFromKey(50, "Tab")).toBeNull();
   });
 });

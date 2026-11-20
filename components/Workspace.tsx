@@ -12,6 +12,7 @@ import { useDemo } from "@/hooks/useDemo";
 import { ControlsPanel } from "./simulation/ControlsPanel";
 import { InsightsPanel } from "./simulation/InsightsPanel";
 import { Segmented } from "./ui/Segmented";
+import { CompareDivider } from "./city/CompareDivider";
 
 const CityCanvas = dynamic(() => import("./city/CityCanvas"), {
   ssr: false,
@@ -32,6 +33,8 @@ function WorkspaceInner() {
   const camera = useSim((s) => s.camera);
   const frame = useSim((s) => s.frame);
   const setView = useSim((s) => s.setView);
+  const split = useSim((s) => s.split);
+  const setSplit = useSim((s) => s.setSplit);
 
   const baseline = useMemo(() => simulate(0), []);
   const scenario = useMemo(() => simulate(pct), [pct]);
@@ -50,6 +53,10 @@ function WorkspaceInner() {
           stage={canopy}
           camera={camera}
         />
+
+        {COMPARE_ENABLED && view === "compare" && (
+          <CompareDivider split={split} scenarioPct={pct} onChange={setSplit} onInteract={demo.stop} />
+        )}
 
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
           <div className="flex flex-col items-start gap-2">
