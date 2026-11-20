@@ -35,7 +35,11 @@ export function CompareDivider({
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Capture can fail for synthetic or already-released pointers; dragging still works while over the handle.
+    }
     dragging.current = true;
     onInteract?.();
     fromPointer(e);
@@ -45,7 +49,11 @@ export function CompareDivider({
   };
   const end = (e: PointerEvent<HTMLDivElement>) => {
     dragging.current = false;
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const next = splitFromKey(split, e.key, e.shiftKey);
@@ -92,7 +100,7 @@ export function CompareDivider({
         aria-valuemax={SPLIT_MAX}
         aria-valuenow={split}
         aria-valuetext={`Baseline on the left, ${scenarioLabel} on the right. Divider ${split} percent across.`}
-        className="pointer-events-auto absolute inset-y-0 w-3 -translate-x-1/2 cursor-ew-resize touch-none select-none outline-none focus-visible:[&>span:last-child]:ring-2 focus-visible:[&>span:last-child]:ring-white"
+        className="compare-divider pointer-events-auto absolute inset-y-0 w-3 -translate-x-1/2 cursor-ew-resize touch-none select-none outline-none"
         style={{ left: `${split}%` }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -103,7 +111,7 @@ export function CompareDivider({
         <span aria-hidden className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
         <span
           aria-hidden
-          className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-bg/90 text-white shadow-lg"
+          className="compare-divider-knob absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-bg/90 text-white shadow-lg"
         >
           <ChevronsLeftRight className="h-5 w-5" />
         </span>

@@ -29,7 +29,8 @@ Requires Node 20+ and a WebGL-capable browser (a clear fallback is shown otherwi
 4. Metrics, bars and the response curve update immediately.
 5. **Before / After** toggle (sidebar or top of the scene) flips between baseline and scenario.
 6. **Reset** returns to baseline. **Play 40% demo** runs the scripted scenario.
-7. **Share** copies a URL such as `/?conversion=40&view=after&canopy=mature`; opening it restores the same state.
+7. **Compare** (third View option) shows a draggable divider through the 3D city: baseline on the left, the selected scenario on the right, one shared camera. **Play reveal** runs the scripted version.
+8. **Share** copies a URL such as `/?conversion=40&view=after&canopy=mature` (or `…&view=compare&split=62`); opening it restores the same state.
 
 ## Architecture
 
@@ -37,7 +38,8 @@ Requires Node 20+ and a WebGL-capable browser (a clear fallback is shown otherwi
 app/                  Next.js App Router (layout, page, Tailwind theme)
 components/
   Workspace.tsx       3-column workspace; computes simulations once per state
-  city/               React Three Fiber scene (environment, parking, trees, traffic, camera)
+  city/               React Three Fiber scene (environment, parking, trees, traffic, camera,
+                      CompareRenderer + CompareDivider for the before/after reveal)
   simulation/         Controls panel, insights panel, parking-pressure card
   ui/                 Segmented control, tags, animated number
 lib/
@@ -65,6 +67,18 @@ tests/                Vitest suites
 6. **Parking pressure (illustrative):** assumed demand is 104 cars (≈72% of 144 stalls, an assumption in `assumptions.ts`). Without a space = max(0, demand − retained). The largest conversion with no shortfall is 28% (40 spaces); the first shortfall is at 29%. Baseline cars sit in a fixed hash-ranked set of stalls; a car whose stall is converted moves to an empty retained stall if one exists, otherwise it is shown as an amber translucent “ghost” car on its former stall.
 
 All values are in [`lib/config/assumptions.ts`](lib/config/assumptions.ts).
+
+### Compare mode (the reveal)
+
+One canvas, one scene, one camera. Shared geometry (environment, buildings, traffic, street trees,
+lighting) is on three.js layer 0; the scenario-dependent parts (stall strips, parked cars, amber
+markers, lot labels, planted trees) are instanced and mounted twice in Compare mode — a baseline copy
+on layer 1 and a scenario copy on layer 2. `CompareRenderer` then draws the scene twice per frame
+with the same full-canvas viewport, scissored at the divider (left pass sees layers 0+1, right pass
+0+2). Shadows follow the same layers, so each side only casts its own. The divider is a DOM overlay
+(`CompareDivider`, a real slider with pointer, touch and keyboard support). Outside Compare mode the
+renderer is not mounted and nothing is drawn twice. `COMPARE_ENABLED` in `lib/config/features.ts`
+switches the whole feature off. Metrics always show the scenario (the right-hand side).
 
 ### What is and isn't claimed
 

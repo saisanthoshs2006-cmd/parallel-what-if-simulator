@@ -71,6 +71,7 @@ function WorkspaceInner() {
               >
                 <span aria-hidden className="inline-block h-2.5 w-4 rounded-sm bg-amber/60" />
                 <span>
+                  {view === "compare" && <span className="text-mute">Scenario: </span>}
                   <span className="font-mono tabular-nums text-amber">{active.unaccommodatedDemand}</span> assumed cars
                   without a space<span className="hidden sm:inline"> (amber, illustrative)</span>
                 </span>
@@ -84,10 +85,18 @@ function WorkspaceInner() {
               onChange={setView}
               options={[
                 { value: "before", label: "Before" },
-                { value: "after", label: `After · ${pct}%` },
+                {
+                  value: "after",
+                  label: (
+                    <>
+                      After<span className="hidden sm:inline"> · {pct}%</span>
+                    </>
+                  ),
+                },
                 ...(COMPARE_ENABLED ? [{ value: "compare" as const, label: "Compare" }] : []),
               ]}
               className="bg-bg/85"
+              nowrap
             />
           </div>
         </div>

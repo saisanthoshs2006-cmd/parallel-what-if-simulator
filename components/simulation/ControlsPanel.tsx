@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Link2, Play, RotateCcw, Square } from "lucide-react";
+import { ChevronsLeftRight, Check, Link2, Play, RotateCcw, Square } from "lucide-react";
 import { useSim, useSimStoreApi } from "@/store/simulation-store";
 import { buildShareUrl } from "@/lib/simulation/scenario-url";
 import { ASSUMPTIONS } from "@/lib/config/assumptions";
@@ -15,7 +15,13 @@ export function ControlsPanel({
   demo,
 }: {
   scenario: SimulationResult;
-  demo: { playing: boolean; play: () => void; stop: () => void };
+  demo: {
+    playing: boolean;
+    mode: "demo" | "reveal" | null;
+    play: () => void;
+    playReveal: () => void;
+    stop: () => void;
+  };
 }) {
   const name = useSim((s) => s.name);
   const pct = useSim((s) => s.conversionPct);
@@ -154,12 +160,26 @@ export function ControlsPanel({
       <section className="flex flex-col gap-2.5">
         <button
           type="button"
-          onClick={demo.playing ? demo.stop : demo.play}
+          onClick={demo.mode === "demo" ? demo.stop : demo.play}
           className="flex items-center justify-center gap-2 rounded-lg bg-leaf px-4 py-2.5 text-sm font-semibold text-[#06140c] transition hover:brightness-110"
         >
-          {demo.playing ? <Square className="h-4 w-4" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-          {demo.playing ? "Stop demo" : "Play 40% demo"}
+          {demo.mode === "demo" ? <Square className="h-4 w-4" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
+          {demo.mode === "demo" ? "Stop demo" : "Play 40% demo"}
         </button>
+        {COMPARE_ENABLED && (
+          <button
+            type="button"
+            onClick={demo.mode === "reveal" ? demo.stop : demo.playReveal}
+            className="flex items-center justify-center gap-2 rounded-lg border border-leaf/40 px-4 py-2 text-sm font-medium text-leaf transition hover:bg-leaf/10"
+          >
+            {demo.mode === "reveal" ? (
+              <Square className="h-4 w-4" aria-hidden />
+            ) : (
+              <ChevronsLeftRight className="h-4 w-4" aria-hidden />
+            )}
+            {demo.mode === "reveal" ? "Stop reveal" : "Play reveal"}
+          </button>
+        )}
         <div className="grid grid-cols-2 gap-2.5">
           <button
             type="button"
